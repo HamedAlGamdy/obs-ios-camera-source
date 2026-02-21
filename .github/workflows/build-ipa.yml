@@ -1,0 +1,40 @@
+name: Build iOS IPA
+
+on:
+  workflow_dispatch:  # يشتغل يدوياً بضغط زر
+
+jobs:
+  build:
+    runs-on: macos-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Select Xcode
+        run: sudo xcode-select -s /Applications/Xcode.app
+
+      - name: Build Archive
+        run: |
+          cd Cameras/OBSCamera
+          xcodebuild archive \
+            -scheme OBSCamera \
+            -archivePath $RUNNER_TEMP/OBSCamera.xcarchive \
+            -sdk iphoneos \
+            CODE_SIGNING_ALLOWED=NO \
+            CODE_SIGNING_REQUIRED=NO
+
+      - name: Export IPA
+        run: |
+          mkdir -p $RUNNER_TEMP/ipa
+          cp -r $RUNNER_TEMP/OBSCamera.xcarchive/Products/Applications/OBSCamera.app $RUNNER_TEMP/ipa/
+          cd $RUNNER_TEMP/ipa
+          mkdir Payload
+          mv OBSCamera.app Payload/
+          zip -r OBSCamera.ipa Payload/
+
+      - name: Upload IPA
+        uses: actions/upload-artifact@v4
+        with:
+          name: OBSCamera-IPA
+          path: ${{ runner.temp }}/ipa/OBSCamera.ipa
+          retention-days: 7
